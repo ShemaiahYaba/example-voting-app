@@ -3,6 +3,7 @@ FROM python:3.11-slim@sha256:e88e9763f943ec1834f992a4b51e0f24500486803e8bc534e57
 
 # Add curl for healthcheck and libcap so a non-root user can bind port 80
 RUN apt-get -o Acquire::Retries=5 update && \
+    apt-get -o Acquire::Retries=5 upgrade -y --no-install-recommends && \
     apt-get -o Acquire::Retries=5 install -y --no-install-recommends curl libcap2-bin && \
     rm -rf /var/lib/apt/lists/* && \
     groupadd --gid 10001 app && \

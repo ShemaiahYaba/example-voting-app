@@ -8,7 +8,7 @@
 # docker buildx build --platform "linux/arm64/v8" .
 
 # build compiles the program for the builder's local platform
-FROM --platform=${BUILDPLATFORM} mcr.microsoft.com/dotnet/sdk:7.0@sha256:d32bd65cf5843f413e81f5d917057c82da99737cb1637e905a1a4bc2e7ec6c8d AS build
+FROM --platform=${BUILDPLATFORM} mcr.microsoft.com/dotnet/sdk:7.0-bookworm-slim@sha256:cfa3db6c98cf58da9135d0641b03db4f7eb2e43bdbf97b7294e70908abc3d99b AS build
 ARG TARGETPLATFORM
 ARG TARGETARCH
 ARG BUILDPLATFORM
@@ -21,9 +21,12 @@ RUN dotnet restore -a $TARGETARCH
 COPY . .
 RUN dotnet publish -c release -o /app -a $TARGETARCH --self-contained false --no-restore
 
-# app image
-FROM mcr.microsoft.com/dotnet/runtime:7.0@sha256:8cd26108e7a329458e5b84342816ae39b2b38bd041cfdc0b79b8cf1c0e0d376f
-RUN groupadd --gid 10001 app && \
+# app image (bookworm = Debian 12; bullseye/11 is EOL and fails Trivy)
+FROM mcr.microsoft.com/dotnet/runtime:7.0-bookworm-slim@sha256:f24ddd398454193219bd21979029cdefb51fcda577a497eff519c84ac736c110
+RUN apt-get -o Acquire::Retries=5 update && \
+    apt-get -o Acquire::Retries=5 upgrade -y --no-install-recommends && \
+    rm -rf /var/lib/apt/lists/* && \
+    groupadd --gid 10001 app && \
     useradd --uid 10001 --gid app --home-dir /app --shell /usr/sbin/nologin app
 WORKDIR /app
 COPY --from=build --chown=app:app /app .
