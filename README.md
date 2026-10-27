@@ -97,7 +97,15 @@ kubectl get pods -n voting-app
 
 ## Architecture
 
-![Architecture diagram](architecture.excalidraw.png)
+### Delivery (Terraform + CI/CD + Helm)
+
+![Capstone architecture](architecture-capstone.jpg)
+
+Push to `main` → GitHub Actions (test, build, Trivy) → GHCR (`:sha`) → Helm on EKS. Terraform provisions the `voting-app` cluster in the default VPC.
+
+### Runtime (app)
+
+![App architecture](architecture.excalidraw.png)
 
 * A front-end web app in [Python](/vote) which lets you vote between two options
 * A [Redis](https://hub.docker.com/_/redis/) which collects new votes
