@@ -30,20 +30,69 @@ docker stack deploy --compose-file docker-stack.yml vote
 
 ## Run the app in Kubernetes
 
-The folder k8s-specifications contains the YAML specifications of the Voting App's services.
+Raw manifests live in `k8s-specifications/`. Prefer Helm for deploy:
 
-Run the following command to create the deployments and services. Note it will create these resources in your current namespace (`default` if you haven't changed it.)
+```shell
+helm upgrade --install voting-app ./charts/voting-app \
+  --namespace voting-app --create-namespace
+```
+
+Or apply the plain specs:
 
 ```shell
 kubectl create -f k8s-specifications/
 ```
 
-The `vote` web app is then available on port 31000 on each host of the cluster, the `result` web app is available on port 31001.
+## Terraform (kind / EKS)
 
-To remove them, run:
+- Local kind cluster: `terraform/README.md` and `terraform/`
+- AWS EKS (us-east-1, default VPC): `terraform/aws/`
 
 ```shell
-kubectl delete -f k8s-specifications/
+cd terraform/aws
+terraform init
+terraform apply
+aws eks update-kubeconfig --region us-east-1 --name voting-app
+```
+
+Destroy with `terraform destroy` when you are done (EKS incurs cost).
+
+## CI/CD (GitHub Actions)
+
+One push to `main` runs smoke tests, builds `vote` / `result` / `worker`, scans with Trivy (fails on CRITICAL), pushes SHA-tagged images to GHCR, then Helm-deploys to EKS.
+
+Workflow: [`.github/workflows/ci.yaml`](.github/workflows/ci.yaml)
+
+### GitHub secrets (Settings → Secrets and variables → Actions)
+
+| Secret | Purpose |
+|--------|---------|
+| `AWS_ACCESS_KEY_ID` | IAM user/key that can update kubeconfig and talk to EKS |
+| `AWS_SECRET_ACCESS_KEY` | Matching secret key |
+| `AWS_REGION` | e.g. `us-east-1` |
+
+No AWS keys belong in Git. Images go to `ghcr.io/shemaiahyaba/example-voting-app-{vote,result,worker}:<sha>`.
+
+If EKS cannot pull images, open each package on GitHub → Package settings → Change visibility → Public (the workflow also tries to set this).
+
+### Helm rollback demo
+
+1. Deploy a known-good release (CI on `main`, or local `helm upgrade`).
+2. Ship a bad release on purpose:
+
+```shell
+helm upgrade voting-app ./charts/voting-app \
+  --namespace voting-app \
+  --set vote.image.tag=does-not-exist \
+  --wait --timeout 2m || true
+```
+
+3. Confirm pods are failing, then roll back:
+
+```shell
+helm history voting-app -n voting-app
+helm rollback voting-app -n voting-app
+kubectl get pods -n voting-app
 ```
 
 ## Architecture

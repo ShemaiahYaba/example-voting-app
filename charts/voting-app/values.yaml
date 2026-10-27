@@ -1,0 +1,44 @@
+vote:
+  image:
+    repository: ghcr.io/shemaiahyaba/example-voting-app-vote
+    tag: latest
+    pullPolicy: IfNotPresent
+  replicas: 1
+  service:
+    type: LoadBalancer
+    port: 8080
+    targetPort: 80
+
+result:
+  image:
+    repository: ghcr.io/shemaiahyaba/example-voting-app-result
+    tag: latest
+    pullPolicy: IfNotPresent
+  replicas: 1
+  service:
+    type: LoadBalancer
+    port: 8081
+    targetPort: 80
+
+worker:
+  image:
+    repository: ghcr.io/shemaiahyaba/example-voting-app-worker
+    tag: latest
+    pullPolicy: IfNotPresent
+  replicas: 1
+
+redis:
+  image:
+    repository: redis
+    tag: alpine
+    pullPolicy: IfNotPresent
+  replicas: 1
+
+db:
+  image:
+    repository: postgres
+    tag: "15-alpine"
+    pullPolicy: IfNotPresent
+  replicas: 1
+  user: postgres
+  password: postgres
